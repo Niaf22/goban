@@ -1,5 +1,5 @@
 // Service worker: l'app funziona anche offline.
-const CACHE = "goban-v1";
+const CACHE = "goban-v2";
 const CORE = [
   "./",
   "./index.html",

@@ -110,6 +110,16 @@ details[open] summary::after{content:"−"}
 select,input[type=number]{font:inherit;font-size:14px;padding:7px 8px;border:1px solid var(--rule);border-radius:6px;background:var(--surface);color:var(--ink);width:100%;font-variant-numeric:tabular-nums}
 .rules{margin:10px 0 0;padding-left:18px;font-size:14px;color:var(--ink);display:flex;flex-direction:column;gap:6px;max-width:60ch}
 .rules b{font-weight:600}
+.rules-body{display:flex;flex-direction:column;gap:16px;margin-top:12px;font-size:14px;max-width:60ch}
+.rules-body section{display:flex;flex-direction:column;gap:6px}
+.rules-body h3{margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.rules-body p{margin:0}
+.rules-body ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+.rules-body b{font-weight:600}
+.diag{display:flex;gap:12px;flex-wrap:wrap}
+.diag figure{margin:0;display:flex;flex-direction:column;gap:4px}
+.diag svg{width:104px;height:104px;max-width:100%;border-radius:4px;display:block}
+.diag figcaption{font-size:12px;color:var(--muted)}
 kbd{font-family:var(--f-mono);font-size:12px;border:1px solid var(--rule);border-radius:4px;padding:0 4px}
 
 @media (max-width:820px){
@@ -210,17 +220,68 @@ kbd{font-family:var(--f-mono);font-size:12px;border:1px solid var(--rule);border
       </form>
     </details>
 
-    <details>
-      <summary>Regole in breve</summary>
-      <ul class="rules">
-        <li>Nero e Bianco posano a turno una pietra su un'intersezione libera. Inizia Nero; con handicap inizia Bianco.</li>
-        <li>Le <b>libertà</b> sono le intersezioni libere adiacenti a una pietra o a un gruppo. Senza libertà il gruppo è <b>catturato</b> e diventa prigioniero.</li>
-        <li><b>Suicidio</b> vietato: non puoi giocare dove la tua pietra resta senza libertà, salvo che catturi.</li>
-        <li><b>Ko</b>: non puoi ricreare la posizione di un turno fa. Gioca altrove, poi potrai riprendere. Il punto bloccato è segnato con un quadrato.</li>
-        <li>Due <b>passaggi</b> consecutivi chiudono la partita. Clicca i gruppi morti per toglierli, poi conferma.</li>
-        <li><b>Area</b>: pietre vive + territorio. <b>Territorio</b>: territorio + prigionieri. Il <b>komi</b> compensa Bianco per il secondo tratto.</li>
-        <li>Su touch: tocca per vedere l'anteprima, tocca di nuovo per confermare. Tastiera: <kbd>P</kbd> passa, <kbd>U</kbd> annulla.</li>
-      </ul>
+    <details id="rulesBox">
+      <summary>Regole per chi inizia</summary>
+      <div class="rules-body">
+        <section>
+          <h3>Lo scopo</h3>
+          <p>Il Go è un gioco di territorio. Nero e Bianco cercano di circondare con le proprie pietre la parte più grande possibile del goban. Vince chi alla fine controlla più spazio.</p>
+        </section>
+        <section>
+          <h3>Come si muove</h3>
+          <ul>
+            <li>Si gioca a turno, una pietra alla volta. Inizia Nero.</li>
+            <li>Le pietre vanno sugli incroci delle linee, non dentro i quadrati.</li>
+            <li>Una pietra posata non si sposta più. Può solo essere catturata.</li>
+          </ul>
+        </section>
+        <section>
+          <h3>Le libertà</h3>
+          <p>Gli incroci liberi subito accanto a una pietra sono le sue <b>libertà</b>: sopra, sotto, a destra e a sinistra, mai in diagonale. Al centro una pietra ne ha 4, sul bordo 3, nell'angolo 2.</p>
+          <p>Pietre dello stesso colore che si toccano formano un <b>gruppo</b> e mettono in comune le libertà.</p>
+          <div class="diag"><figure><svg viewBox="0 0 100 100" role="img" aria-label="Pietra nera con quattro libertà"><rect width="100" height="100" fill="var(--board)"/><line x1="0" y1="10" x2="100" y2="10" stroke="var(--grid)" stroke-width=".9"/><line x1="10" y1="0" x2="10" y2="100" stroke="var(--grid)" stroke-width=".9"/><line x1="0" y1="30" x2="100" y2="30" stroke="var(--grid)" stroke-width=".9"/><line x1="30" y1="0" x2="30" y2="100" stroke="var(--grid)" stroke-width=".9"/><line x1="0" y1="50" x2="100" y2="50" stroke="var(--grid)" stroke-width=".9"/><line x1="50" y1="0" x2="50" y2="100" stroke="var(--grid)" stroke-width=".9"/><line x1="0" y1="70" x2="100" y2="70" stroke="var(--grid)" stroke-width=".9"/><line x1="70" y1="0" x2="70" y2="100" stroke="var(--grid)" stroke-width=".9"/><line x1="0" y1="90" x2="100" y2="90" stroke="var(--grid)" stroke-width=".9"/><line x1="90" y1="0" x2="90" y2="100" stroke="var(--grid)" stroke-width=".9"/><circle cx="50" cy="50" r="9.4" fill="var(--stone-b)"/><circle cx="50" cy="30" r="4" fill="var(--accent)"/><circle cx="30" cy="50" r="4" fill="var(--accent)"/><circle cx="70" cy="50" r="4" fill="var(--accent)"/><circle cx="50" cy="70" r="4" fill="var(--accent)"/></svg><figcaption>4 libertà</figcaption></figure><figure><svg viewBox="0 0 100 100" role="img" aria-label="Due pietre nere collegate con sei libertà"><rect width="100" height="100" fill="var(--board)"/><line x1="0" y1="10" x2="100" y2="10" stroke="var(--grid)" stroke-width=".9"/><line x1="10" y1="0" x2="10" y2="100" stroke="var(--grid)" stroke-width=".9"/><line x1="0" y1="30" x2="100" y2="30" stroke="var(--grid)" stroke-width=".9"/><line x1="30" y1="0" x2="30" y2="100" stroke="var(--grid)" stroke-width=".9"/><line x1="0" y1="50" x2="100" y2="50" stroke="var(--grid)" stroke-width=".9"/><line x1="50" y1="0" x2="50" y2="100" stroke="var(--grid)" stroke-width=".9"/><line x1="0" y1="70" x2="100" y2="70" stroke="var(--grid)" stroke-width=".9"/><line x1="70" y1="0" x2="70" y2="100" stroke="var(--grid)" stroke-width=".9"/><line x1="0" y1="90" x2="100" y2="90" stroke="var(--grid)" stroke-width=".9"/><line x1="90" y1="0" x2="90" y2="100" stroke="var(--grid)" stroke-width=".9"/><circle cx="30" cy="50" r="9.4" fill="var(--stone-b)"/><circle cx="50" cy="50" r="9.4" fill="var(--stone-b)"/><circle cx="30" cy="30" r="4" fill="var(--accent)"/><circle cx="50" cy="30" r="4" fill="var(--accent)"/><circle cx="10" cy="50" r="4" fill="var(--accent)"/><circle cx="70" cy="50" r="4" fill="var(--accent)"/><circle cx="30" cy="70" r="4" fill="var(--accent)"/><circle cx="50" cy="70" r="4" fill="var(--accent)"/></svg><figcaption>Gruppo: 6 libertà</figcaption></figure></div>
+        </section>
+        <section>
+          <h3>Catturare</h3>
+          <p>Se occupi l'ultima libertà di una pietra o di un gruppo avversario, lo catturi: le pietre spariscono e diventano tuoi <b>prigionieri</b>.</p>
+          <p>Un gruppo con una sola libertà è in <b>atari</b>: o scappa subito, o al turno dopo può essere preso.</p>
+          <div class="diag"><figure><svg viewBox="0 0 100 100" role="img" aria-label="Pietra bianca in atari, resta una libertà"><rect width="100" height="100" fill="var(--board)"/><line x1="0" y1="10" x2="100" y2="10" stroke="var(--grid)" stroke-width=".9"/><line x1="10" y1="0" x2="10" y2="100" stroke="var(--grid)" stroke-width=".9"/><line x1="0" y1="30" x2="100" y2="30" stroke="var(--grid)" stroke-width=".9"/><line x1="30" y1="0" x2="30" y2="100" stroke="var(--grid)" stroke-width=".9"/><line x1="0" y1="50" x2="100" y2="50" stroke="var(--grid)" stroke-width=".9"/><line x1="50" y1="0" x2="50" y2="100" stroke="var(--grid)" stroke-width=".9"/><line x1="0" y1="70" x2="100" y2="70" stroke="var(--grid)" stroke-width=".9"/><line x1="70" y1="0" x2="70" y2="100" stroke="var(--grid)" stroke-width=".9"/><line x1="0" y1="90" x2="100" y2="90" stroke="var(--grid)" stroke-width=".9"/><line x1="90" y1="0" x2="90" y2="100" stroke="var(--grid)" stroke-width=".9"/><circle cx="50" cy="50" r="9" fill="var(--stone-w)" stroke="var(--stone-w-edge)" stroke-width="1"/><circle cx="50" cy="30" r="9.4" fill="var(--stone-b)"/><circle cx="30" cy="50" r="9.4" fill="var(--stone-b)"/><circle cx="70" cy="50" r="9.4" fill="var(--stone-b)"/><circle cx="50" cy="70" r="4" fill="var(--accent)"/></svg><figcaption>Bianco in atari</figcaption></figure><figure><svg viewBox="0 0 100 100" role="img" aria-label="Nero gioca sotto e cattura la pietra bianca"><rect width="100" height="100" fill="var(--board)"/><line x1="0" y1="10" x2="100" y2="10" stroke="var(--grid)" stroke-width=".9"/><line x1="10" y1="0" x2="10" y2="100" stroke="var(--grid)" stroke-width=".9"/><line x1="0" y1="30" x2="100" y2="30" stroke="var(--grid)" stroke-width=".9"/><line x1="30" y1="0" x2="30" y2="100" stroke="var(--grid)" stroke-width=".9"/><line x1="0" y1="50" x2="100" y2="50" stroke="var(--grid)" stroke-width=".9"/><line x1="50" y1="0" x2="50" y2="100" stroke="var(--grid)" stroke-width=".9"/><line x1="0" y1="70" x2="100" y2="70" stroke="var(--grid)" stroke-width=".9"/><line x1="70" y1="0" x2="70" y2="100" stroke="var(--grid)" stroke-width=".9"/><line x1="0" y1="90" x2="100" y2="90" stroke="var(--grid)" stroke-width=".9"/><line x1="90" y1="0" x2="90" y2="100" stroke="var(--grid)" stroke-width=".9"/><circle cx="50" cy="50" r="8.5" fill="none" stroke="var(--grid)" stroke-width="1" stroke-dasharray="2 2"/><circle cx="50" cy="30" r="9.4" fill="var(--stone-b)"/><circle cx="30" cy="50" r="9.4" fill="var(--stone-b)"/><circle cx="70" cy="50" r="9.4" fill="var(--stone-b)"/><circle cx="50" cy="70" r="9.4" fill="var(--stone-b)"/><circle cx="50" cy="70" r="3.6" fill="none" stroke="var(--stone-w)" stroke-width="1.6"/></svg><figcaption>Nero cattura</figcaption></figure></div>
+        </section>
+        <section>
+          <h3>Due mosse vietate</h3>
+          <ul>
+            <li><b>Suicidio</b>: non puoi giocare dove la tua pietra resterebbe subito senza libertà. Fa eccezione la mossa che cattura: in quel caso le pietre avversarie spariscono e la tua resta.</li>
+            <li><b>Ko</b>: se l'avversario ti ha appena catturato una singola pietra, non puoi riprenderla subito nello stesso modo, altrimenti la partita si ripeterebbe all'infinito. Gioca prima una mossa altrove. L'app segna il punto bloccato con un quadratino.</li>
+          </ul>
+        </section>
+        <section>
+          <h3>Gruppi vivi e morti</h3>
+          <p>Un gruppo che racchiude due spazi vuoti separati, detti <b>occhi</b>, è <b>vivo</b>: l'avversario non può riempirli entrambi in una mossa, quindi non lo cattura mai. Un gruppo che non riesce a farsi due occhi prima o poi verrà catturato: si dice che è <b>morto</b>.</p>
+        </section>
+        <section>
+          <h3>Fine della partita</h3>
+          <p>Quando non ci sono più mosse utili, si preme <b>Passa</b>. Due passaggi di fila chiudono la partita. Poi tocca i gruppi morti rimasti sul goban per toglierli, e premi <b>Conferma</b>: l'app conta i punti.</p>
+        </section>
+        <section>
+          <h3>Il punteggio</h3>
+          <p>Ogni incrocio vuoto circondato solo dalle tue pietre è tuo <b>territorio</b>. Con il conteggio ad area si sommano territorio e pietre sul goban; con quello a territorio si sommano territorio e prigionieri. Il risultato è quasi sempre lo stesso.</p>
+          <p>Bianco riceve qualche punto in più, il <b>komi</b>, perché gioca per secondo.</p>
+        </section>
+        <section>
+          <h3>Consigli per le prime partite</h3>
+          <ul>
+            <li>Inizia sul 9×9 contro il computer Facile: una partita dura pochi minuti.</li>
+            <li>Gioca le prime mosse negli angoli, poi sui lati, per ultimo al centro. Negli angoli il territorio si chiude con meno pietre.</li>
+            <li>Tieni le pietre collegate: un gruppo diviso in pezzi si cattura più facilmente.</li>
+            <li>Prima di ogni mossa guarda se qualche tuo gruppo è rimasto con una sola libertà.</li>
+            <li>Sbagli? Premi <b>Annulla</b> e prova un'altra mossa.</li>
+          </ul>
+        </section>
+        <section>
+          <h3>Comandi</h3>
+          <p>Sul telefono tocca un incrocio per vedere l'anteprima e tocca di nuovo per confermare. Da tastiera: <kbd>P</kbd> passa, <kbd>U</kbd> annulla.</p>
+        </section>
+      </div>
     </details>
   </aside>
 </main>
