@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Goban</title>
+<meta name="description" content="Goban minimal per giocare a Go.">
+<meta name="theme-color" content="#ECEEEA" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#151719" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Goban">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Shippori+Mincho:wght@600&display=swap">
+<style>
+/* Layout: goban grande a sinistra, colonna stretta di stato e comandi a destra; su telefono si impila. */
+:root{
+  --paper:#ECEEEA; --surface:#F7F8F5; --ink:#1A1C1E; --muted:#5F6662; --rule:#D3D7D0;
+  --board:#DCB878; --grid:#3B2A12; --accent:#2B4C7E; --accent-ink:#FFFFFF; --warn:#A3412A;
+  --stone-b:#161616; --stone-w:#FAFAF7; --stone-w-edge:#8C8A80;
+  --f-body:"Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --f-disp:"Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#151719; --surface:#1D2023; --ink:#E4E6E2; --muted:#9AA19C; --rule:#2E3236;
+  --board:#B8955A; --grid:#21170A; --accent:#93B3E0; --accent-ink:#0F1A2B; --warn:#E28A72;
+  --stone-b:#0E0E0E; --stone-w:#F2F1EC; --stone-w-edge:#6E6A5E; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --paper:#151719; --surface:#1D2023; --ink:#E4E6E2; --muted:#9AA19C; --rule:#2E3236;
+  --board:#B8955A; --grid:#21170A; --accent:#93B3E0; --accent-ink:#0F1A2B; --warn:#E28A72;
+  --stone-b:#0E0E0E; --stone-w:#F2F1EC; --stone-w-edge:#6E6A5E; color-scheme:dark }
+
+
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation;overscroll-behavior:none}
+html,body{min-height:100%}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
+.app{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:32px;max-width:1120px;margin:0 auto;padding-block:20px;align-items:start}
+.board-col{min-width:0;display:flex;justify-content:center}
+#board{display:block;width:min(100%, calc(100vh - 40px));width:min(100%, calc(100dvh - 40px));aspect-ratio:1;max-width:100%;
+  touch-action:manipulation;user-select:none;-webkit-user-select:none;cursor:pointer;border-radius:6px;
+  box-shadow:0 1px 0 rgba(0,0,0,.08), 0 10px 30px -18px rgba(0,0,0,.45)}
+.side{display:flex;flex-direction:column;gap:18px;min-width:0}
+
+.brand{display:flex;align-items:center;gap:12px}
+.kanji{font-family:var(--f-disp);font-size:30px;line-height:1;writing-mode:vertical-rl;letter-spacing:.05em}
+.brand h1{margin:0;font-size:20px;font-weight:600;text-wrap:balance}
+.sub{margin:0;color:var(--muted);font-family:var(--f-mono);font-size:12px;font-variant-numeric:tabular-nums}
+
+.players{display:grid;border-top:1px solid var(--rule)}
+.player{display:grid;grid-template-columns:22px 1fr auto;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--rule);position:relative}
+.player.on::before{content:"";position:absolute;left:-12px;top:14px;bottom:14px;width:3px;border-radius:2px;background:var(--accent)}
+.stone{width:20px;height:20px;border-radius:50%;display:block}
+.stone.b{background:var(--stone-b)}
+.stone.w{background:var(--stone-w);box-shadow:inset 0 0 0 1px var(--stone-w-edge)}
+.pname{display:flex;flex-direction:column;min-width:0}
+.pname strong{font-weight:600}
+.who{font-size:12px;color:var(--muted)}
+.player.on .who{color:var(--accent);font-weight:500}
+.pstat{display:flex;gap:14px;text-align:right}
+.pstat div{display:flex;flex-direction:column}
+.num{font-family:var(--f-mono);font-size:18px;font-variant-numeric:tabular-nums}
+.lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+
+.status{margin:0;min-height:2.9em;color:var(--ink)}
+.status .warn{color:var(--warn)}
+.status .k{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+
+.actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+button{font:inherit;font-size:14px;padding:9px 10px;border-radius:6px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);cursor:pointer}
+button:hover:not(:disabled){border-color:var(--muted)}
+button:disabled{opacity:.4;cursor:default}
+button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible,.seg input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:500}
+button.danger{border-color:var(--warn);color:var(--warn)}
+
+.score{display:flex;flex-direction:column;gap:12px}
+.score table{width:100%;border-collapse:collapse;font-size:14px}
+.score th,.score td{padding:6px 0;border-bottom:1px solid var(--rule);text-align:right;font-weight:400}
+.score th:first-child,.score td:first-child{text-align:left;color:var(--muted)}
+.score thead th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.score td{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.score td:first-child{font-family:var(--f-body)}
+.score tr.tot td{border-bottom:0;font-weight:500;color:var(--ink)}
+.result{margin:0;font-weight:600}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+details{border-top:1px solid var(--rule);padding-top:12px}
+summary{cursor:pointer;font-weight:500;list-style:none;display:flex;justify-content:space-between}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";color:var(--muted);font-family:var(--f-mono)}
+details[open] summary::after{content:"−"}
+.form{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field>span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.seg{display:flex;border:1px solid var(--rule);border-radius:6px;overflow:hidden}
+.seg label{flex:1;position:relative}
+.seg input{position:absolute;opacity:0;inset:0;margin:0}
+.seg span{display:block;text-align:center;padding:7px 4px;font-size:14px;cursor:pointer}
+.seg label+label span{border-left:1px solid var(--rule)}
+.seg input:checked+span{background:var(--ink);color:var(--paper)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+select,input[type=number]{font:inherit;font-size:14px;padding:7px 8px;border:1px solid var(--rule);border-radius:6px;background:var(--surface);color:var(--ink);width:100%;font-variant-numeric:tabular-nums}
+.rules{margin:10px 0 0;padding-left:18px;font-size:14px;color:var(--ink);display:flex;flex-direction:column;gap:6px;max-width:60ch}
+.rules b{font-weight:600}
+kbd{font-family:var(--f-mono);font-size:12px;border:1px solid var(--rule);border-radius:4px;padding:0 4px}
+
+@media (max-width:820px){
+  .app{grid-template-columns:minmax(0,1fr);gap:18px;padding-block:12px}
+  #board{width:100%}
+  .brand{order:-1}
+}
+@media (prefers-reduced-motion:no-preference){ .player::before{transition:opacity .2s} }
+</style>
+
+</head>
+<body>
+<main class="app">
+  <section class="board-col"><svg id="board" role="img" aria-label="Goban"></svg></section>
+  <aside class="side">
+    <header class="brand">
+      <span class="kanji" aria-hidden="true">囲碁</span>
+      <div><h1>Go</h1><p class="sub" id="sub"></p></div>
+    </header>
+
+    <div class="players">
+      <div class="player" id="p1">
+        <span class="stone b"></span>
+        <div class="pname"><strong>Nero</strong><span class="who" id="who1"></span></div>
+        <div class="pstat"><div><span class="num" id="cap1">0</span><span class="lbl">prigionieri</span></div></div>
+      </div>
+      <div class="player" id="p2">
+        <span class="stone w"></span>
+        <div class="pname"><strong>Bianco</strong><span class="who" id="who2"></span></div>
+        <div class="pstat"><div><span class="num" id="komi">0</span><span class="lbl">komi</span></div><div><span class="num" id="cap2">0</span><span class="lbl">prigionieri</span></div></div>
+      </div>
+    </div>
+
+    <p class="status" id="status" aria-live="polite"></p>
+
+    <div class="actions" id="playActions">
+      <button id="btnPass" title="Scorciatoia: P">Passa</button>
+      <button id="btnUndo" title="Scorciatoia: U">Annulla</button>
+      <button id="btnResign">Abbandona</button>
+    </div>
+
+    <section class="score" id="scorePanel" hidden>
+      <table>
+        <thead><tr><th></th><th>Nero</th><th>Bianco</th></tr></thead>
+        <tbody id="scoreBody"></tbody>
+      </table>
+      <p class="result" id="result"></p>
+      <div class="row2" id="scoreActions">
+        <button id="btnResume">Riprendi</button>
+        <button id="btnConfirm" class="primary">Conferma</button>
+      </div>
+    </section>
+
+    <details id="newGame">
+      <summary>Nuova partita</summary>
+      <form class="form" id="ngForm">
+        <div class="field"><span>Goban</span>
+          <div class="seg">
+            <label><input type="radio" name="size" id="sz9" value="9"><span>9×9</span></label>
+            <label><input type="radio" name="size" id="sz13" value="13"><span>13×13</span></label>
+            <label><input type="radio" name="size" id="sz19" value="19" checked><span>19×19</span></label>
+          </div>
+        </div>
+        <div class="field"><span>Avversario</span>
+          <div class="seg">
+            <label><input type="radio" name="opp" id="oppH" value="human" checked><span>Umano</span></label>
+            <label><input type="radio" name="opp" id="oppC" value="bot"><span>Computer</span></label>
+          </div>
+        </div>
+        <div class="form" id="botFields" hidden style="margin-top:0">
+          <div class="field"><span>Livello</span>
+            <div class="seg">
+              <label><input type="radio" name="level" id="lvE" value="easy"><span>Facile</span></label>
+              <label><input type="radio" name="level" id="lvM" value="medium" checked><span>Medio</span></label>
+              <label><input type="radio" name="level" id="lvH" value="hard"><span>Difficile</span></label>
+            </div>
+          </div>
+          <div class="field"><span>Giochi con</span>
+            <div class="seg">
+              <label><input type="radio" name="human" id="huB" value="1" checked><span>Nero</span></label>
+              <label><input type="radio" name="human" id="huW" value="2"><span>Bianco</span></label>
+            </div>
+          </div>
+        </div>
+        <div class="field"><span>Conteggio</span>
+          <div class="seg">
+            <label><input type="radio" name="rules" id="ruA" value="area" checked><span>Area (cinese)</span></label>
+            <label><input type="radio" name="rules" id="ruT" value="territory"><span>Territorio (giapp.)</span></label>
+          </div>
+        </div>
+        <div class="two">
+          <label class="field"><span>Handicap</span>
+            <select id="handicap"><option value="0">Nessuno</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option></select>
+          </label>
+          <label class="field"><span>Komi</span><input type="number" id="komiIn" step="0.5" min="0" max="20" value="7.5"></label>
+        </div>
+        <button type="submit" class="primary">Inizia</button>
+      </form>
+    </details>
+
+    <details>
+      <summary>Regole in breve</summary>
+      <ul class="rules">
+        <li>Nero e Bianco posano a turno una pietra su un'intersezione libera. Inizia Nero; con handicap inizia Bianco.</li>
+        <li>Le <b>libertà</b> sono le intersezioni libere adiacenti a una pietra o a un gruppo. Senza libertà il gruppo è <b>catturato</b> e diventa prigioniero.</li>
+        <li><b>Suicidio</b> vietato: non puoi giocare dove la tua pietra resta senza libertà, salvo che catturi.</li>
+        <li><b>Ko</b>: non puoi ricreare la posizione di un turno fa. Gioca altrove, poi potrai riprendere. Il punto bloccato è segnato con un quadrato.</li>
+        <li>Due <b>passaggi</b> consecutivi chiudono la partita. Clicca i gruppi morti per toglierli, poi conferma.</li>
+        <li><b>Area</b>: pietre vive + territorio. <b>Territorio</b>: territorio + prigionieri. Il <b>komi</b> compensa Bianco per il secondo tratto.</li>
+        <li>Su touch: tocca per vedere l'anteprima, tocca di nuovo per confermare. Tastiera: <kbd>P</kbd> passa, <kbd>U</kbd> annulla.</li>
+      </ul>
+    </details>
+  </aside>
+</main>
+
+<script>
+(()=>{
+const LET="ABCDEFGHJKLMNOPQRST";
+const KEY="goban-minimal-v1";
+const $=id=>document.getElementById(id);
+const svg=$("board");
+const NAME={1:"Nero",2:"Bianco"};
+const fmt=v=>Number(v).toLocaleString("it-IT",{maximumFractionDigits:1});
+
+let S=null, hover=-1, pending=-1, botTimer=null, lastPointer="mouse", geo={};
+
+/* ---------- motore ---------- */
+function nb(i,n){const x=i%n,y=(i/n)|0,r=[];if(x>0)r.push(i-1);if(x<n-1)r.push(i+1);if(y>0)r.push(i-n);if(y<n-1)r.push(i+n);return r;}
+function group(b,i,n){const c=b[i],st=[i],libs=new Set(),seen=new Set([i]);
+  for(let k=0;k<st.length;k++)for(const j of nb(st[k],n)){if(b[j]===0)libs.add(j);else if(b[j]===c&&!seen.has(j)){seen.add(j);st.push(j);}}
+  return {stones:st,libs};}
+function simulate(b,n,i,c){
+  if(b[i]!==0)return {ok:false,why:"occ"};
+  const nbd=b.slice();nbd[i]=c;const cap=[];
+  for(const j of nb(i,n))if(nbd[j]===3-c){const g=group(nbd,j,n);if(g.libs.size===0)for(const s of g.stones){nbd[s]=0;cap.push(s);}}
+  const own=group(nbd,i,n);
+  if(own.libs.size===0)return {ok:false,why:"suicide"};
+  return {ok:true,board:nbd,cap,own};
+}
+const same=(a,b)=>{for(let k=0;k<a.length;k++)if(a[k]!==b[k])return false;return true;};
+function prevBoard(){return S.history.length?S.history[S.history.length-1].board:null;}
+function legal(i){const r=simulate(S.board,S.n,i,S.toPlay);if(!r.ok)return r;const p=prevBoard();if(p&&same(p,r.board))return {ok:false,why:"ko"};return r;}
+
+function hcPoints(n,h){
+  const lo=n===9?2:3,hi=n-1-lo,mid=(n-1)/2;
+  const c=[[hi,lo],[lo,hi],[hi,hi],[lo,lo]],C=[mid,mid],L=[lo,mid],R=[hi,mid],T=[mid,lo],B=[mid,hi];
+  const map={2:c.slice(0,2),3:c.slice(0,3),4:c,5:[...c,C],6:[...c,L,R],7:[...c,L,R,C],8:[...c,L,R,T,B],9:[...c,L,R,T,B,C]};
+  return map[h]||[];
+}
+function starPoints(n){const s=n===9?[2,6,4]:n===13?[3,9,6]:[3,9,15];
+  const out=[];if(n===19){for(const x of s)for(const y of s)out.push([x,y]);}else{for(const x of s.slice(0,2))for(const y of s.slice(0,2))out.push([x,y]);out.push([s[2],s[2]]);}return out;}
+
+function newGame(cfg){
+  const n=cfg.size,board=new Array(n*n).fill(0);let toPlay=1;
+  if(cfg.handicap>=2){for(const [x,y] of hcPoints(n,cfg.handicap))board[y*n+x]=1;toPlay=2;}
+  clearTimeout(botTimer);pending=-1;hover=-1;
+  S={cfg,n,board,toPlay,caps:{1:0,2:0},last:null,lastPass:false,passes:0,ko:null,phase:"play",history:[],moves:[],dead:[],result:null,msg:""};
+  after();
+}
+function snap(){S.history.push({board:S.board.slice(),toPlay:S.toPlay,caps:{...S.caps},last:S.last,lastPass:S.lastPass,passes:S.passes,ko:S.ko,mv:S.moves.length});}
+function restore(h){S.board=h.board.slice();S.toPlay=h.toPlay;S.caps={...h.caps};S.last=h.last;S.lastPass=h.lastPass;S.passes=h.passes;S.ko=h.ko;S.moves.length=h.mv;}
+
+function play(i){
+  const r=legal(i);
+  if(!r.ok){S.msg=r.why==="suicide"?"Mossa non valida: la pietra resterebbe senza libertà.":r.why==="ko"?"Ko: non puoi riprendere subito. Gioca altrove prima.":"";render();return false;}
+  snap();
+  S.board=r.board;S.caps[S.toPlay]+=r.cap.length;
+  S.ko=(r.cap.length===1&&r.own.stones.length===1&&r.own.libs.size===1)?r.cap[0]:null;
+  S.last=i;S.lastPass=false;S.passes=0;S.moves.push(i);S.toPlay=3-S.toPlay;S.msg="";pending=-1;
+  after();return true;
+}
+function pass(){
+  if(S.phase!=="play")return;
+  snap();S.moves.push(-1);S.passes++;S.last=null;S.lastPass=true;S.ko=null;S.toPlay=3-S.toPlay;S.msg="";pending=-1;
+  if(S.passes>=2){S.phase="scoring";S.dead=[];}
+  after();
+}
+function undo(){
+  if(!S.history.length)return;
+  clearTimeout(botTimer);
+  if(S.phase!=="play"){S.phase="play";S.dead=[];S.result=null;}
+  restore(S.history.pop());
+  if(S.cfg.bot&&S.toPlay===botColor()&&S.history.length)restore(S.history.pop());
+  S.msg="";pending=-1;after();
+}
+function resign(){
+  const loser=S.cfg.bot?S.cfg.human:S.toPlay;
+  clearTimeout(botTimer);
+  S.phase="over";S.result={text:`${NAME[3-loser]} vince per abbandono.`,resign:true};after();
+}
+
+function score(){
+  const n=S.n,b=S.board.slice(),dead=new Set(S.dead),deadCap={1:0,2:0};
+  for(const i of dead){if(b[i]){deadCap[3-b[i]]++;b[i]=0;}}
+  const owner=new Int8Array(n*n),seen=new Uint8Array(n*n),terr={1:0,2:0},stones={1:0,2:0};
+  for(let i=0;i<n*n;i++){
+    if(b[i]){stones[b[i]]++;continue;}
+    if(seen[i])continue;
+    const reg=[i];seen[i]=1;const border=new Set();
+    for(let k=0;k<reg.length;k++)for(const j of nb(reg[k],n)){if(b[j])border.add(b[j]);else if(!seen[j]){seen[j]=1;reg.push(j);}}
+    if(border.size===1){const c=[...border][0];terr[c]+=reg.length;for(const r of reg)owner[r]=c;}
+  }
+  const area=S.cfg.rules==="area",komi=S.cfg.komi;
+  const pris={1:S.caps[1]+deadCap[1],2:S.caps[2]+deadCap[2]};
+  const t1=terr[1]+(area?stones[1]:pris[1]),t2=terr[2]+(area?stones[2]:pris[2])+komi;
+  return {owner,terr,stones,pris,t1,t2,area,komi};
+}
+function resultText(sc){const d=sc.t1-sc.t2;if(d===0)return "Patta.";return `${d>0?"Nero":"Bianco"} vince di ${fmt(Math.abs(d))} ${Math.abs(d)===1?"punto":"punti"}.`;}
+function toggleDead(i){
+  const g=group(S.board,i,S.n),set=new Set(S.dead),on=set.has(i);
+  for(const s of g.stones){if(on)set.delete(s);else set.add(s);}
+  S.dead=[...set];after();
+}
+
+/* ---------- computer (livello base) ---------- */
+const botColor=()=>S.cfg.bot?3-S.cfg.human:0;
+const isBotTurn=()=>S.cfg.bot&&S.phase==="play"&&S.toPlay===botColor();
+const LEVELS={easy:"Facile",medium:"Medio",hard:"Difficile"};
+// stima del territorio per influenza: ogni pietra irradia fino a distanza 4
+function terrEst(b,n,c){
+  const inf=new Float32Array(n*n);
+  for(let s=0;s<n*n;s++){if(!b[s])continue;const sg=b[s]===c?1:-1,sx=s%n,sy=(s/n)|0;
+    for(let dy=-4;dy<=4;dy++){const y=sy+dy;if(y<0||y>=n)continue;const ad=Math.abs(dy);
+      for(let dx=-4+ad;dx<=4-ad;dx++){const x=sx+dx;if(x<0||x>=n)continue;inf[y*n+x]+=sg/(1+ad+Math.abs(dx));}}}
+  let t=0;for(let i=0;i<n*n;i++){if(b[i])t+=b[i]===c?1:-1;else if(inf[i]>0.6)t++;else if(inf[i]<-0.6)t--;}
+  return t;
+}
+// dimensione del più grande gruppo proprio rimasto in atari
+function danger(b,n,c){
+  const seen=new Uint8Array(n*n);let worst=0;
+  for(let i=0;i<n*n;i++){if(b[i]!==c||seen[i])continue;const g=group(b,i,n);for(const s of g.stones)seen[s]=1;if(g.libs.size===1)worst=Math.max(worst,g.stones.length);}
+  return worst;
+}
+function botMove(){
+  if(!isBotTurn())return;
+  const lv=S.cfg.level||"medium";
+  const n=S.n,c=S.toPlay,o=3-c,b=S.board;
+  let filled=0;for(const v of b)if(v)filled++;
+  const opening=filled<n*n*0.12,late=filled>n*n*0.55;
+  const noise=lv==="easy"?7:lv==="hard"?0.6:2, care=lv==="easy"?0.4:1;
+  const cand=[];
+  for(let i=0;i<n*n;i++){
+    if(b[i])continue;
+    const ns=nb(i,n);
+    if(ns.every(j=>b[j]===c))continue; // non riempire i propri occhi
+    const r=legal(i);if(!r.ok)continue;
+    let s=Math.random()*noise;
+    s+=r.cap.length*12*care;
+    const L=r.own.libs.size;
+    if(L===1&&!r.cap.length)s-=16*care;else if(L===2)s-=1;
+    for(const j of ns){
+      if(b[j]===c){const g=group(b,j,n);if(g.libs.size===1&&L>=2)s+=(6+g.stones.length*2)*care;}
+      if(r.board[j]===o){const g=group(r.board,j,n);if(g.libs.size===1)s+=4*care;else if(g.libs.size===2)s+=1;}
+    }
+    const x=i%n,y=(i/n)|0,d=Math.min(x,y,n-1-x,n-1-y);
+    if(opening){if(d===0)s-=6;else if(d===1)s-=3;else if(d===2||d===3)s+=2.5;}
+    else if(d===0)s-=2;
+    const own=ns.filter(j=>b[j]===c).length,opp=ns.filter(j=>b[j]===o).length;
+    if(own>=3)s-=4;
+    if(opp>=3&&!r.cap.length)s-=5;
+    if(!opening){let near=false;for(let dy=-2;dy<=2&&!near;dy++)for(let dx=-2;dx<=2;dx++){const xx=x+dx,yy=y+dy;if(xx>=0&&yy>=0&&xx<n&&yy<n&&b[yy*n+xx]){near=true;break;}}if(near)s+=1.5;}
+    cand.push({i,s,r});
+  }
+  if(!cand.length)return pass();
+  cand.sort((a,b)=>b.s-a.s);
+  let pick=cand[0];
+  if(lv==="easy"&&Math.random()<0.3){const pool=cand.filter(m=>m.s>-3);if(pool.length)pick=pool[Math.floor(Math.random()*pool.length)];}
+  if(lv==="hard"){
+    const base=terrEst(b,n,c);let bv=-Infinity;
+    for(const m of cand.slice(0,16)){
+      const v=m.s+(terrEst(m.r.board,n,c)-base)*0.9-danger(m.r.board,n,c)*3;
+      if(v>bv){bv=v;pick={...m,s:v};}
+    }
+  }
+  const bs=pick.s;
+  const stop=lv==="hard"?(bs<-2||(S.passes===1&&bs<3)||(late&&bs<2)):(bs<-2||(S.passes===1&&bs<4)||(late&&bs<2.5));
+  if(stop)pass();else play(pick.i);
+}
+function scheduleBot(){clearTimeout(botTimer);if(isBotTurn())botTimer=setTimeout(botMove,S.cfg.level==="hard"?500:380);}
+
+/* ---------- disegno ---------- */
+const coord=i=>LET[i%S.n]+(S.n-((i/S.n)|0));
+function render(){
+  const n=S.n,cell=32,pad=cell*1.15,size=(n-1)*cell+pad*2,P=k=>pad+k*cell;
+  geo={n,cell,pad,size};
+  svg.setAttribute("viewBox",`0 0 ${size} ${size}`);
+  svg.setAttribute("aria-label",`Goban ${n} per ${n}`);
+  let h=`<rect width="${size}" height="${size}" rx="6" fill="var(--board)"/>`;
+  for(let k=0;k<n;k++){const w=(k===0||k===n-1)?1.6:0.9;
+    h+=`<line x1="${P(0)}" y1="${P(k)}" x2="${P(n-1)}" y2="${P(k)}" stroke="var(--grid)" stroke-width="${w}"/>`;
+    h+=`<line x1="${P(k)}" y1="${P(0)}" x2="${P(k)}" y2="${P(n-1)}" stroke="var(--grid)" stroke-width="${w}"/>`;}
+  for(const [x,y] of starPoints(n))h+=`<circle cx="${P(x)}" cy="${P(y)}" r="3.2" fill="var(--grid)"/>`;
+  const fs=11,ty=pad*0.42;
+  for(let k=0;k<n;k++){
+    h+=`<text x="${P(k)}" y="${ty+4}" text-anchor="middle" font-size="${fs}" font-family="IBM Plex Mono, monospace" fill="var(--grid)" opacity=".7">${LET[k]}</text>`;
+    h+=`<text x="${P(k)}" y="${size-ty+4}" text-anchor="middle" font-size="${fs}" font-family="IBM Plex Mono, monospace" fill="var(--grid)" opacity=".7">${LET[k]}</text>`;
+    h+=`<text x="${ty}" y="${P(k)+4}" text-anchor="middle" font-size="${fs}" font-family="IBM Plex Mono, monospace" fill="var(--grid)" opacity=".7">${n-k}</text>`;
+    h+=`<text x="${size-ty}" y="${P(k)+4}" text-anchor="middle" font-size="${fs}" font-family="IBM Plex Mono, monospace" fill="var(--grid)" opacity=".7">${n-k}</text>`;
+  }
+  const scoring=S.phase!=="play"&&!(S.result&&S.result.resign);
+  const sc=scoring?score():null,dead=new Set(S.dead),r=cell*0.47;
+  for(let i=0;i<n*n;i++){
+    const v=S.board[i],x=P(i%n),y=P((i/n)|0);
+    if(v){
+      const op=dead.has(i)?' opacity=".35"':"";
+      h+=v===1?`<circle cx="${x}" cy="${y}" r="${r}" fill="var(--stone-b)"${op}/>`
+              :`<circle cx="${x}" cy="${y}" r="${r-0.5}" fill="var(--stone-w)" stroke="var(--stone-w-edge)" stroke-width="1"${op}/>`;
+    }
+    if(sc&&sc.owner[i]){const q=cell*0.28;h+=`<rect x="${x-q/2}" y="${y-q/2}" width="${q}" height="${q}" fill="${sc.owner[i]===1?"var(--stone-b)":"var(--stone-w)"}" stroke="${sc.owner[i]===1?"none":"var(--stone-w-edge)"}" stroke-width="1"/>`;}
+  }
+  if(S.last!=null&&S.board[S.last]){const x=P(S.last%n),y=P((S.last/n)|0);
+    h+=`<circle cx="${x}" cy="${y}" r="${cell*0.18}" fill="none" stroke="${S.board[S.last]===1?"var(--stone-w)":"var(--stone-b)"}" stroke-width="2"/>`;}
+  if(S.phase==="play"&&S.ko!=null&&!S.board[S.ko]){const x=P(S.ko%n),y=P((S.ko/n)|0),q=cell*0.34;
+    h+=`<rect x="${x-q/2}" y="${y-q/2}" width="${q}" height="${q}" fill="none" stroke="var(--grid)" stroke-width="1.6"/>`;}
+  h+=`<circle id="ghost" r="${r}" opacity="0" pointer-events="none"/>`;
+  svg.innerHTML=h;
+  drawGhost();
+  ui(sc);
+}
+function drawGhost(){
+  const g=document.getElementById("ghost");if(!g)return;
+  const i=pending>=0?pending:hover;
+  if(i<0||S.phase!=="play"||isBotTurn()||S.board[i]){g.setAttribute("opacity","0");return;}
+  const {n,cell,pad}=geo;
+  g.setAttribute("cx",pad+(i%n)*cell);g.setAttribute("cy",pad+((i/n)|0)*cell);
+  g.setAttribute("fill",S.toPlay===1?"var(--stone-b)":"var(--stone-w)");
+  g.setAttribute("stroke",S.toPlay===1?"none":"var(--stone-w-edge)");
+  g.setAttribute("opacity",pending>=0?"0.6":"0.35");
+}
+
+function ui(sc){
+  const c=S.cfg;
+  $("sub").textContent=`${S.n}×${S.n} · ${c.rules==="area"?"Area":"Territorio"} · Komi ${fmt(c.komi)}${c.handicap>=2?` · H${c.handicap}`:""}`;
+  $("cap1").textContent=S.caps[1];$("cap2").textContent=S.caps[2];$("komi").textContent=fmt(c.komi);
+  const active=S.phase==="play";
+  $("p1").classList.toggle("on",active&&S.toPlay===1);$("p2").classList.toggle("on",active&&S.toPlay===2);
+  const label=col=>c.bot?(col===c.human?"Tu":`Computer · ${LEVELS[c.level||"medium"]}`):"";
+  for(const col of [1,2]){const w=$("who"+col);const base=label(col);
+    w.textContent=active&&S.toPlay===col?(base?base+" · al tratto":"Al tratto"):base;}
+
+  let st="";
+  const mv=`<span class="k">Mossa ${S.moves.length+1}</span>`;
+  if(S.phase==="play"){
+    if(S.msg)st=`<span class="warn">${S.msg}</span>`;
+    else if(isBotTurn())st=`${mv} · Il computer sta pensando…`;
+    else if(pending>=0)st=`${mv} · <span class="k">${coord(pending)}</span>: tocca di nuovo per confermare.`;
+    else{
+      const prev=S.moves.length?(S.lastPass?`${NAME[3-S.toPlay]} ha passato`:`ultima <span class="k">${coord(S.last)}</span>`):"";
+      st=`${mv} · tocca a ${NAME[S.toPlay]}${prev?" · "+prev:""}.`;
+      if(S.passes===1)st+=` Passa anche tu per chiudere la partita.`;
+      if(S.ko!=null)st+=` Ko in <span class="k">${coord(S.ko)}</span>.`;
+    }
+  }else if(S.phase==="scoring")st="Partita chiusa. Clicca i gruppi morti per toglierli dal conteggio, poi conferma.";
+  else st=S.result?S.result.text:"";
+  $("status").innerHTML=st;
+
+  $("playActions").hidden=S.phase!=="play";
+  $("btnPass").disabled=isBotTurn();
+  $("btnUndo").disabled=!S.history.length;
+  const showScore=sc&&!(S.result&&S.result.resign);
+  $("scorePanel").hidden=!showScore;
+  if(showScore){
+    const rows=[["Territorio",sc.terr[1],sc.terr[2]],
+      sc.area?["Pietre vive",sc.stones[1],sc.stones[2]]:["Prigionieri",sc.pris[1],sc.pris[2]],
+      ["Komi","—",fmt(sc.komi)]];
+    $("scoreBody").innerHTML=rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join("")+
+      `<tr class="tot"><td>Totale</td><td>${fmt(sc.t1)}</td><td>${fmt(sc.t2)}</td></tr>`;
+    $("result").textContent=(S.phase==="scoring"?"Provvisorio: ":"")+resultText(sc);
+    $("scoreActions").hidden=S.phase!=="scoring";
+  }
+  if(S.phase==="over")$("newGame").open=true;
+}
+
+function after(){save();render();scheduleBot();}
+
+/* ---------- salvataggio ---------- */
+function data(){return {...S,history:S.history};}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(data()));}catch(e){}}
+function load(obj){
+  if(!obj||!obj.cfg||!Array.isArray(obj.board)||obj.board.length!==obj.n*obj.n)return false;
+  S={...obj,msg:"",dead:obj.dead||[],history:obj.history||[],moves:obj.moves||[]};return true;
+}
+window.claude?.hot?.snapshot?.(()=>({game:data()}));
+
+/* ---------- input ---------- */
+function ptIndex(e){
+  const rc=svg.getBoundingClientRect(),{n,cell,pad,size}=geo;
+  const sx=(e.clientX-rc.left)/rc.width*size,sy=(e.clientY-rc.top)/rc.height*size;
+  const x=Math.round((sx-pad)/cell),y=Math.round((sy-pad)/cell);
+  if(x<0||y<0||x>=n||y>=n)return -1;
+  return y*n+x;
+}
+svg.addEventListener("pointerdown",e=>{lastPointer=e.pointerType;});
+svg.addEventListener("pointermove",e=>{if(e.pointerType!=="mouse")return;const i=ptIndex(e);if(i!==hover){hover=i;drawGhost();}});
+svg.addEventListener("pointerleave",()=>{hover=-1;drawGhost();});
+svg.addEventListener("click",e=>{
+  const i=ptIndex(e);if(i<0)return;
+  if(S.phase==="scoring"){if(S.board[i])toggleDead(i);return;}
+  if(S.phase!=="play"||isBotTurn())return;
+  if(S.board[i]){pending=-1;render();return;}
+  if(lastPointer!=="mouse"&&lastPointer!=="pen"&&pending!==i){
+    const r=legal(i);
+    if(!r.ok){S.msg=r.why==="suicide"?"Mossa non valida: la pietra resterebbe senza libertà.":"Ko: non puoi riprendere subito. Gioca altrove prima.";pending=-1;render();return;}
+    pending=i;S.msg="";render();return;
+  }
+  play(i);
+});
+$("btnPass").onclick=pass;
+$("btnUndo").onclick=undo;
+let resignArm=null;
+$("btnResign").onclick=e=>{
+  const b=e.currentTarget;
+  if(resignArm){clearTimeout(resignArm);resignArm=null;b.textContent="Abbandona";b.classList.remove("danger");resign();return;}
+  b.textContent="Conferma";b.classList.add("danger");
+  resignArm=setTimeout(()=>{resignArm=null;b.textContent="Abbandona";b.classList.remove("danger");},3000);
+};
+$("btnResume").onclick=()=>{S.phase="play";S.passes=0;S.dead=[];S.msg="";after();};
+$("btnConfirm").onclick=()=>{const sc=score();S.phase="over";S.result={text:resultText(sc),resign:false};after();};
+document.addEventListener("keydown",e=>{
+  if(/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;
+  const k=e.key.toLowerCase();
+  if(k==="p"&&!e.metaKey&&!e.ctrlKey&&S.phase==="play"&&!isBotTurn()){pass();}
+  else if(k==="u"&&!e.metaKey&&!e.ctrlKey||(k==="z"&&(e.ctrlKey||e.metaKey))){e.preventDefault();undo();}
+});
+
+/* ---------- nuova partita ---------- */
+const form=$("ngForm");
+const val=name=>form.querySelector(`input[name=${name}]:checked`).value;
+function autoKomi(){const h=+$("handicap").value;$("komiIn").value=h>=2?0.5:(val("rules")==="area"?7.5:6.5);}
+form.addEventListener("change",e=>{
+  $("botFields").hidden=val("opp")!=="bot";
+  if(e.target.name==="rules"||e.target.id==="handicap")autoKomi();
+});
+form.addEventListener("submit",e=>{
+  e.preventDefault();
+  let komi=parseFloat($("komiIn").value);if(!isFinite(komi))komi=7.5;
+  newGame({size:+val("size"),bot:val("opp")==="bot",human:+val("human"),level:val("level"),rules:val("rules"),handicap:+$("handicap").value,komi});
+  $("newGame").open=false;
+});
+function syncForm(){
+  const c=S.cfg;
+  $("sz"+c.size).checked=true;$(c.bot?"oppC":"oppH").checked=true;$(c.human===2?"huW":"huB").checked=true;
+  $(c.rules==="area"?"ruA":"ruT").checked=true;$("handicap").value=String(c.handicap||0);$("komiIn").value=c.komi;
+  $({easy:"lvE",medium:"lvM",hard:"lvH"}[c.level||"medium"]).checked=true;
+  $("botFields").hidden=!c.bot;
+}
+
+/* ---------- avvio ---------- */
+function start(hot){
+  let ok=false;
+  if(hot&&hot.game)ok=load(hot.game);
+  if(!ok){try{ok=load(JSON.parse(localStorage.getItem(KEY)));}catch(e){ok=false;}}
+  if(ok){syncForm();after();}
+  else newGame({size:19,bot:false,human:1,level:"medium",rules:"area",handicap:0,komi:7.5});
+}
+window.claude?.hot?.ready?window.claude.hot.ready(start):start(window.claude?.hot?.data??{});
+})();
+</script>
+<script>
+if("serviceWorker" in navigator){addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));}
+</script>
+</body>
+</html>
